@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ClassTrack - Teacher Check-in</title>
+
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <script src="../schedule.js"></script>
+    <link rel="stylesheet" href="../styles.css">
+
+</head>
+
+<body>
+
+    <!-- CHECK-IN VIEW -->
+    <div id="view-checkin" class="view">
+        <div class="nav-header">
+            <div class="container nav-content">
+                <div class="nav-brand"><i class="fas fa-school"></i> ZCM Track</div>
+            </div>
+        </div>
+        <div class="container scanner-container">
+            <div class="card">
+                <h2 class="text-xl font-bold mb-6 text-center" style="color: #800000;">Teacher Check-in</h2>
+
+                <!-- Classroom & Period Info - Two Columns -->
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <!-- Classroom Info -->
+                    <div id="classroom-info"
+                        class="p-4 bg-gradient-to-r from-red-50 to-blue-50 border border-gray-200 rounded text-center">
+                        <p class="text-gray-600 text-xs mb-1">Classroom</p>
+                        <p class="text-xl font-bold" style="color: #800000;" id="display-class-name">Loading...</p>
+                        <p class="text-sm text-gray-600 hidden" id="display-subject">-</p>
+                    </div>
+
+                    <!-- Period Info -->
+                    <div class="p-4 bg-blue-50 text-blue-800 rounded text-center">
+                        <p class="text-gray-600 text-xs mb-1">Current Period</p>
+                        <span id="auto-period-display" class="font-bold text-lg">Detecting Period...</span>
+                    </div>
+                </div>
+
+                <!-- Error Display -->
+                <div id="error-message" class="hidden mb-4 p-4 bg-red-50 text-red-700 rounded text-center"></div>
+
+                <!-- Check-in Form -->
+                <form id="checkin-form" onsubmit="app.handleCheckIn(event)">
+                    <div class="mb-4">
+                        <label class="block text-lg font-medium text-gray-700 mb-3">Enter Your Teacher ID</label>
+                        <input type="number" id="teacher-id-input" class="input" placeholder="e.g., 101" required
+                            autofocus inputmode="numeric" pattern="[0-9]*"
+                            style="font-size: 32px; text-align: center; font-weight: 700; padding: 1.5rem; letter-spacing: 0.1em;">
+                        <p class="text-sm text-gray-500 mt-2 text-center">Enter your 3-digit ID number</p>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full" style="padding: 1.25rem; font-size: 20px;">
+                        <i class="fas fa-check-circle"></i> Confirm Check-in
+                    </button>
+                </form>
+
+                <!-- Success Message (hidden by default) -->
+                <div id="success-message"
+                    class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded text-center">
+                    <i class="fas fa-check-circle text-green-600 text-3xl mb-2"></i>
+                    <p class="text-green-800 font-bold text-lg" id="success-text">Check-in Successful!</p>
+                    <p class="text-sm text-green-600 mt-2">Redirecting...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, collection, getDocs, addDoc, query, where, doc, getDoc } from '../firebase-init.js';
+
+        // --- DATA STORE (Firebase Adapter) ---
+        const Store = {
+            async get(collectionName) {
+                try {
+                    const querySnapshot = await getDocs(collection(db, collectionName));
+                    const items = [];
+                    querySnapshot.forEach((doc) => {
+                        items.push({ id: doc.id, ...doc.data() });
+                    });
+                    return items;
+                } catch (e) {
+                    console.error(`Error getting documents from ${collectionName}: `, e);
+                    return [];
+                }
+            },
+
+            async add(collectionName, data) {
+                try {
+                    await addDoc(collection(db, collectionName), data);
+                } catch (e) {
+                    console.error("Error adding document: ", e);
+                    throw e;
+                }
+            },
+
+            // Specific query for duplicate check
+            async checkDuplicate(teacherId, className, periodId, date) {
+                const q = query(collection(db, "attendance"),
+                    where("teacherId", "==", teacherId),
+                    where("className", "==", className),
+                    where("period", "==", periodId),
+                    where("date", "==", date)
+                );
+                const querySnapshot = await getDocs(q);
+                return !querySnapshot.empty;
+            }
+        };
+
+        // --- APP LOGIC ---
+        const app = {
+            currentClassroom: null,
+            currentPeriod: null,
+
+            async init() {
+                // Get classroom ID from URL parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                const classroomId = urlParams.get('classroom');
+
+                if (!classroomId) {
+                    this.showError('Invalid QR Code: No classroom information found. Please scan a valid classroom QR code.');
+                    document.getElementById('checkin-form').classList.add('hidden');
+                    return;
+                }
+
+                // Load classroom data
+                // Note: In Firestore we can fetch just the specific doc if we used the ID as doc ID
+                // But for compatibility with how we set it up (custom ID field inside doc), we query
+                // Or if we used custom ID as doc ID (which we did in admin.js for teachers/classrooms), we can getDoc
+
+                try {
+                    const docRef = doc(db, "classrooms", classroomId);
+                    const docSnap = await getDoc(docRef);
+
+                    if (docSnap.exists()) {
+                        this.currentClassroom = { id: docSnap.id, ...docSnap.data() };
+                    } else {
+                        // Fallback: try to find by field if ID mismatch (legacy support)
+                        const classrooms = await Store.get('classrooms');
+                        this.currentClassroom = classrooms.find(c => c.id === classroomId);
+                    }
+                } catch (e) {
+                    console.error("Error fetching classroom:", e);
+                    this.showError("Network error. Please try again.");
+                    return;
+                }
+
+                if (!this.currentClassroom) {
+                    this.showError(`Classroom not found in system (ID: ${classroomId}). Please contact administrator.`);
+                    document.getElementById('checkin-form').classList.add('hidden');
+                    return;
+                }
+
+                // Display classroom info
+                document.getElementById('display-class-name').textContent = this.currentClassroom.name;
+                // document.getElementById('display-subject').textContent = this.currentClassroom.subject || 'General';
+
+                // Auto-detect and display current period
+                this.updatePeriodDisplay();
+
+                // Update period display every 30 seconds
+                setInterval(() => this.updatePeriodDisplay(), 30000);
+            },
+
+            updatePeriodDisplay() {
+                this.currentPeriod = Schedule.getCurrentPeriod();
+                const periodDisplay = document.getElementById('auto-period-display');
+
+                if (this.currentPeriod) {
+                    if (this.currentPeriod.type === 'break') {
+                        periodDisplay.innerHTML = `${this.currentPeriod.name}<br><span class="text-sm">(No Class)</span>`;
+                        periodDisplay.className = "font-bold text-lg text-orange-600";
+                    } else {
+                        periodDisplay.innerHTML = `${this.currentPeriod.name}<br><span class="text-sm">${this.currentPeriod.start} - ${this.currentPeriod.end}</span>`;
+                        periodDisplay.className = "font-bold text-lg text-blue-800";
+                    }
+                } else {
+                    periodDisplay.textContent = "No Active Period";
+                    periodDisplay.className = "font-bold text-lg text-red-600";
+                }
+            },
+
+            showError(message) {
+                const errorDiv = document.getElementById('error-message');
+                errorDiv.textContent = message;
+                errorDiv.classList.remove('hidden');
+            },
+
+            hideError() {
+                document.getElementById('error-message').classList.add('hidden');
+            },
+
+            async handleCheckIn(e) {
+                e.preventDefault();
+                this.hideError();
+
+                const teacherId = document.getElementById('teacher-id-input').value.trim();
+
+                // Validate period
+                if (!this.currentPeriod) {
+                    this.showError("No active period found. Cannot check in outside of class periods.");
+                    return;
+                }
+
+                if (this.currentPeriod.type === 'break') {
+                    if (!confirm(`It is currently ${this.currentPeriod.name}. Do you want to check in anyway?`)) {
+                        return;
+                    }
+                }
+
+                // Validate teacher
+                let teacher;
+                try {
+                    const docRef = doc(db, "teachers", teacherId);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists()) {
+                        teacher = { id: docSnap.id, ...docSnap.data() };
+                    } else {
+                        // Fallback scan
+                        const teachers = await Store.get('teachers');
+                        teacher = teachers.find(t => t.id === teacherId);
+                    }
+                } catch (err) {
+                    console.error("Error fetching teacher:", err);
+                    this.showError("Network error. Please try again.");
+                    return;
+                }
+
+                if (!teacher) {
+                    this.showError(`Invalid Teacher ID: "${teacherId}". Please check your ID and try again.`);
+                    return;
+                }
+
+                // Check for duplicate check-in
+                const today = new Date().toISOString().split('T')[0];
+                const isDuplicate = await Store.checkDuplicate(teacher.id, this.currentClassroom.name, this.currentPeriod.id, today);
+
+                if (isDuplicate) {
+                    if (!confirm(`You have already checked in for ${this.currentPeriod.name} in ${this.currentClassroom.name} today. Do you want to record another check-in?`)) {
+                        return;
+                    }
+                }
+
+                // Calculate status (on time or late)
+                const now = new Date();
+                const statusInfo = Schedule.calculateStatus(this.currentPeriod, now);
+
+                // Create attendance record
+                const record = {
+                    id: Date.now(), // Keep timestamp ID for sorting/ref
+                    teacherId: teacher.id,
+                    teacherName: teacher.name,
+                    className: this.currentClassroom.name,
+                    subject: this.currentClassroom.subject || 'General',
+                    period: this.currentPeriod.id,
+                    timestamp: now.getTime(),
+                    date: today,
+                    status: statusInfo.status
+                };
+
+                // Save attendance
+                try {
+                    await Store.add('attendance', record);
+                    // Show success message
+                    this.showSuccess(teacher.name, this.currentPeriod.name, statusInfo);
+                } catch (err) {
+                    this.showError("Failed to save check-in. Please try again.");
+                }
+            },
+
+            showSuccess(teacherName, periodName, statusInfo) {
+                // Hide form
+                document.getElementById('checkin-form').classList.add('hidden');
+
+                // Show success message
+                const successDiv = document.getElementById('success-message');
+                const successText = document.getElementById('success-text');
+
+                let statusEmoji = statusInfo.status === 'On Time' ? '✅' : '⚠️';
+                let statusText = statusInfo.status === 'On Time'
+                    ? 'On Time'
+                    : `Late by ${statusInfo.delayMins} minutes`;
+
+                successText.innerHTML = `
+                    ${statusEmoji} Check-in Successful!<br>
+                    <span class="text-base">${teacherName}</span><br>
+                    <span class="text-sm">${periodName} • ${statusText}</span>
+                `;
+
+                successDiv.classList.remove('hidden');
+
+                // Update message to show closing
+                setTimeout(() => {
+                    const closingText = document.querySelector('#success-message p.text-sm');
+                    if (closingText) {
+                        closingText.textContent = 'Closing...';
+                    }
+                }, 1500);
+
+                // Close the tab/window after 2.5 seconds
+                setTimeout(() => {
+                    // Try to close the window/tab
+                    // Note: This will only work if the window was opened by JavaScript
+                    // For user-opened tabs, browsers may prevent closing for security
+                    window.close();
+                    
+                    // Fallback: If window.close() doesn't work (browser security),
+                    // try to navigate away or show a message
+                    setTimeout(() => {
+                        // If still open after trying to close, the browser blocked it
+                        // In this case, we can't force close, but we've shown the success message
+                        console.log('Window close was blocked by browser security');
+                    }, 100);
+                }, 2500);
+            }
+        };
+
+        // Expose app globally
+        window.app = app;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+    </script>
+</body>
+
+</html>
