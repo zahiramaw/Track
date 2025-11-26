@@ -477,6 +477,141 @@ tr:hover {
 }
 
 /* Print Styles */
+@media (max-width: 768px) {
+    /* Navigation - stack on mobile */
+    .nav-content {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .nav-links {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .nav-link {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Container padding */
+    .container {
+        padding: 0.75rem;
+    }
+    
+    /* Grid layouts - stack on mobile */
+    .grid[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+    
+    /* Dashboard grid */
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    /* Cards */
+    .card {
+        padding: 1rem;
+    }
+    
+    /* Buttons - make touch-friendly */
+    .btn {
+        padding: 0.75rem 1.25rem;
+        min-height: 44px; /* iOS touch target */
+    }
+    
+    .btn-sm {
+        padding: 0.625rem 1rem;
+        min-height: 40px;
+    }
+    
+    /* Button groups */
+    .flex.items-center.gap-2 {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    
+    /* Headers with buttons - stack on mobile */
+    .flex.justify-between.items-center {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    /* Tables - better mobile handling */
+    .table-container {
+        font-size: 0.875rem;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    table {
+        font-size: 0.875rem;
+        min-width: 100%;
+    }
+    
+    th, td {
+        padding: 0.5rem 0.5rem;
+        white-space: nowrap;
+    }
+    
+    /* Modal - mobile friendly */
+    .modal {
+        width: 95%;
+        max-width: 95%;
+        padding: 1.5rem;
+        margin: 1rem auto;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    /* Stat cards */
+    .stat-value {
+        font-size: 1.75rem;
+    }
+    
+    /* Form inputs - prevent zoom on iOS */
+    .input {
+        font-size: 16px;
+    }
+    
+    /* Text sizes */
+    h3.font-bold {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Extra small devices */
+    .nav-link {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+    }
+    
+    .btn-sm {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8rem;
+    }
+    
+    table {
+        font-size: 0.8rem;
+    }
+    
+    th, td {
+        padding: 0.4rem 0.375rem;
+    }
+    
+    .modal {
+        padding: 1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+}
+
 @media print {
     body * {
         visibility: hidden;
