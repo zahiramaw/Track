@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <script src="../schedule.js"></script>
@@ -225,7 +226,14 @@
                     <div class="card">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="font-bold">Teachers</h3>
+                            <div class="flex items-center gap-2">
+                                <label for="teacher-upload" class="btn btn-primary btn-sm" style="cursor: pointer; margin: 0;">
+                                    <i class="fas fa-upload"></i> Upload Excel
+                                </label>
+                                <input type="file" id="teacher-upload" accept=".xlsx,.xls" style="display: none;" onchange="app.handleTeacherUpload(event)">
+                            </div>
                         </div>
+                        <div id="teacher-upload-status" class="hidden mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm"></div>
                         <div class="table-container" style="max-height: 300px; overflow-y: auto;">
                             <table id="teachers-table">
                                 <thead>
