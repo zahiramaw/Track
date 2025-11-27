@@ -154,6 +154,18 @@ body {
     }
 }
 
+
+.header-title{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    h3{
+        margin-bottom: 0;
+    }
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;
