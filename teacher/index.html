@@ -25,13 +25,15 @@
             <div class="container nav-content">
                 <div class="nav-brand text-center header-title">
                     <div class="text-center"><i class="fas fa-school"></i> Zahira </div>
-                    <div class="text-center"><h3 class="text-xl font-bold mb-6 text-center" style="color: #800000;">Teacher Check-in</h3></div>
+                    <div class="text-center">
+                        <h3 class="text-xl font-bold mb-6 text-center" style="color: #800000;">Teacher Check-in</h3>
+                    </div>
                 </div>
             </div>
         </div>
         <div class="container scanner-container">
             <div class="card">
-                
+
 
                 <!-- Classroom & Period Info - Two Columns -->
                 <div class="grid grid-cols-2 gap-3 mb-4" style="display:flex;justify-content: space-between;">
@@ -55,6 +57,24 @@
 
                 <!-- Check-in Form -->
                 <form id="checkin-form" onsubmit="app.handleCheckIn(event)">
+
+                    <!-- Auto Double Period Detection Info -->
+                    <div id="double-period-info" class="hidden mb-6"
+                        style="background: linear-gradient(135deg, #E8F5E9 0%, #E3F2FD 100%); padding: 1.25rem; border-radius: 0.75rem; border: 2px solid #4CAF50;">
+                        <div style="display: flex; align-items: center;">
+                            <i class="fas fa-info-circle"
+                                style="color: #2E7D32; font-size: 1.5rem; margin-right: 0.75rem;"></i>
+                            <div>
+                                <span style="font-weight: 600; color: #2E7D32; font-size: 1rem;">Double Period
+                                    Detected!</span>
+                                <p id="double-period-message"
+                                    style="color: #1B5E20; font-size: 0.875rem; margin: 0.25rem 0 0 0;">
+                                    You are scheduled for consecutive periods. Both will be marked automatically.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="mb-4">
                         <label class="block text-lg font-medium text-gray-700 mb-3">Enter Your Teacher ID</label>
                         <input type="number" id="teacher-id-input" class="input" placeholder="e.g., 101" required
@@ -116,6 +136,25 @@
                 );
                 const querySnapshot = await getDocs(q);
                 return !querySnapshot.empty;
+            },
+
+            // Get schedule entries for a specific class and day
+            async getScheduleForClass(className, day) {
+                try {
+                    const q = query(collection(db, "schedules"),
+                        where("className", "==", className),
+                        where("day", "==", day)
+                    );
+                    const querySnapshot = await getDocs(q);
+                    const items = [];
+                    querySnapshot.forEach((doc) => {
+                        items.push({ id: doc.id, ...doc.data() });
+                    });
+                    return items;
+                } catch (e) {
+                    console.error("Error getting schedule:", e);
+                    return [];
+                }
             }
         };
 
@@ -136,10 +175,6 @@
                 }
 
                 // Load classroom data
-                // Note: In Firestore we can fetch just the specific doc if we used the ID as doc ID
-                // But for compatibility with how we set it up (custom ID field inside doc), we query
-                // Or if we used custom ID as doc ID (which we did in admin.js for teachers/classrooms), we can getDoc
-
                 try {
                     const docRef = doc(db, "classrooms", classroomId);
                     const docSnap = await getDoc(docRef);
@@ -208,7 +243,7 @@
 
                 const teacherId = document.getElementById('teacher-id-input').value.trim();
 
-                // Validate period
+                // 1. Validate Period
                 if (!this.currentPeriod) {
                     this.showError("No active period found. Cannot check in outside of class periods.");
                     return;
@@ -220,7 +255,88 @@
                     }
                 }
 
-                // Validate teacher
+                // 2. Get today's day name for schedule lookup
+                const now = new Date();
+                const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                const todayDay = dayNames[now.getDay()];
+
+                // 3. Get schedule for this class today
+                // Normalize class name: "Grade 6A" -> "6A" to match schedule data
+                let scheduleClassName = this.currentClassroom.name.replace('Grade ', '');
+                const classSchedule = await Store.getScheduleForClass(scheduleClassName, todayDay);
+                console.log('📅 Class schedule for today:', classSchedule);
+
+                // 4. Check for double period - same teacher for current AND next period
+                const periodsToRecord = [this.currentPeriod];
+                let isDoublePeriod = false;
+
+                const allPeriods = Schedule.getPeriods(now);
+                const currentIndex = allPeriods.findIndex(p => p.id === this.currentPeriod.id);
+
+                // Find the next non-break period
+                let nextPeriod = null;
+                for (let i = currentIndex + 1; i < allPeriods.length; i++) {
+                    if (allPeriods[i].type !== 'break') {
+                        nextPeriod = allPeriods[i];
+                        break;
+                    }
+                }
+
+                if (nextPeriod) {
+                    // Check if same teacher has next period in schedule
+                    const currentScheduleEntry = classSchedule.find(s => s.period === this.currentPeriod.id);
+                    const nextScheduleEntry = classSchedule.find(s => s.period === nextPeriod.id);
+
+                    console.log('📋 Current period schedule:', currentScheduleEntry);
+                    console.log('📋 Next period schedule:', nextScheduleEntry);
+
+                    // Check if both periods have the same teacher (by numeric ID or abbreviation)
+                    if (currentScheduleEntry && nextScheduleEntry) {
+                        const currentTeacherId = currentScheduleEntry.teacherNumericId || currentScheduleEntry.teacherId;
+                        const nextTeacherId = nextScheduleEntry.teacherNumericId || nextScheduleEntry.teacherId;
+
+                        if (currentTeacherId === nextTeacherId ||
+                            currentScheduleEntry.teacherId === nextScheduleEntry.teacherId) {
+                            // Verify it matches the teacher checking in
+                            if (currentTeacherId === teacherId || currentScheduleEntry.teacherId === teacherId) {
+                                isDoublePeriod = true;
+                                periodsToRecord.push(nextPeriod);
+
+                                // Show the double period info box
+                                const infoBox = document.getElementById('double-period-info');
+                                const message = document.getElementById('double-period-message');
+
+                                // Clean up subject name
+                                const formatSubject = (name) => {
+                                    if (!name) return 'Class';
+
+                                    // Map long names to shorter ones
+                                    const map = {
+                                        'PRACTICAL TECHNICAL SKILLS': 'PTS',
+                                        'HEALTH & PHYSICAL EDUCATION': 'HPE',
+                                        'ENGLISH LITERATURE': 'Literature',
+                                        'INFORMATION TECHNOLOGY': 'IT'
+                                    };
+
+                                    if (map[name]) return map[name];
+
+                                    // Title Case: "MATHEMATICS" -> "Mathematics"
+                                    return name.toLowerCase().split(' ').map(word =>
+                                        word.charAt(0).toUpperCase() + word.slice(1)
+                                    ).join(' ');
+                                };
+
+                                const formattedSubject = formatSubject(currentScheduleEntry.subject);
+                                message.innerHTML = `You have <b>${formattedSubject}</b> for <b>${this.currentPeriod.name} & ${nextPeriod.name}</b>.<br>Both periods will be marked automatically.`;
+                                infoBox.classList.remove('hidden');
+
+                                console.log('✅ Double period detected for teacher:', teacherId);
+                            }
+                        }
+                    }
+                }
+
+                // 3. Validate Teacher
                 let teacher;
                 try {
                     const docRef = doc(db, "teachers", teacherId);
@@ -243,39 +359,57 @@
                     return;
                 }
 
-                // Check for duplicate check-in
+                // 4. Check for duplicates for ALL intended periods
                 const today = new Date().toISOString().split('T')[0];
-                const isDuplicate = await Store.checkDuplicate(teacher.id, this.currentClassroom.name, this.currentPeriod.id, today);
+                const duplicates = [];
 
-                if (isDuplicate) {
-                    if (!confirm(`You have already checked in for ${this.currentPeriod.name} in ${this.currentClassroom.name} today. Do you want to record another check-in?`)) {
+                for (const p of periodsToRecord) {
+                    const isDuplicate = await Store.checkDuplicate(teacher.id, this.currentClassroom.name, p.id, today);
+                    if (isDuplicate) {
+                        duplicates.push(p.name);
+                    }
+                }
+
+                if (duplicates.length > 0) {
+                    const duplicateNames = duplicates.join(' and ');
+                    if (!confirm(`You have already checked in for ${duplicateNames} in ${this.currentClassroom.name} today. Do you want to record another check-in?`)) {
                         return;
                     }
                 }
 
-                // Calculate status (on time or late)
-                const now = new Date();
+                // 5. Save Attendance Records
                 const statusInfo = Schedule.calculateStatus(this.currentPeriod, now);
 
-                // Create attendance record
-                const record = {
-                    id: Date.now(), // Keep timestamp ID for sorting/ref
-                    teacherId: teacher.id,
-                    teacherName: teacher.name,
-                    className: this.currentClassroom.name,
-                    subject: this.currentClassroom.subject || 'General',
-                    period: this.currentPeriod.id,
-                    timestamp: now.getTime(),
-                    date: today,
-                    status: statusInfo.status
-                };
+                let successPeriodNames = [];
 
-                // Save attendance
                 try {
-                    await Store.add('attendance', record);
-                    // Show success message
-                    this.showSuccess(teacher.name, this.currentPeriod.name, statusInfo);
+                    for (const p of periodsToRecord) {
+                        const record = {
+                            id: Date.now() + Math.random(), // Unique ID
+                            teacherId: teacher.id,
+                            teacherName: teacher.name,
+                            className: this.currentClassroom.name,
+                            subject: this.currentClassroom.subject || 'General',
+                            period: p.id,
+                            timestamp: now.getTime(),
+                            date: today,
+                            status: statusInfo.status,
+                            isDouble: isDoublePeriod
+                        };
+
+                        await Store.add('attendance', record);
+                        successPeriodNames.push(p.name);
+                    }
+
+                    // 6. Show Success
+                    const periodNameDisplay = successPeriodNames.length > 1
+                        ? `${successPeriodNames[0]} & ${successPeriodNames[1]}`
+                        : successPeriodNames[0];
+
+                    this.showSuccess(teacher.name, periodNameDisplay, statusInfo);
+
                 } catch (err) {
+                    console.error(err);
                     this.showError("Failed to save check-in. Please try again.");
                 }
             },
@@ -312,15 +446,9 @@
                 // Close the tab/window after 2.5 seconds
                 setTimeout(() => {
                     // Try to close the window/tab
-                    // Note: This will only work if the window was opened by JavaScript
-                    // For user-opened tabs, browsers may prevent closing for security
                     window.close();
-                    
-                    // Fallback: If window.close() doesn't work (browser security),
-                    // try to navigate away or show a message
+
                     setTimeout(() => {
-                        // If still open after trying to close, the browser blocked it
-                        // In this case, we can't force close, but we've shown the success message
                         console.log('Window close was blocked by browser security');
                     }, 100);
                 }, 2500);
