@@ -90,6 +90,30 @@
                     </select>
                 </div>
 
+                <div id="current-period-panel" class="card card--current-period mb-8">
+                    <div class="current-period-layout">
+                        <div class="current-period-layout__info">
+                            <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Current period</div>
+                            <h3 id="current-period-title">—</h3>
+                            <div id="current-period-started" class="text-sm text-gray-600 mt-1">—</div>
+                        </div>
+                        <div class="current-period-layout__stats">
+                            <div class="current-period-mini-stat current-period-mini-stat--attended">
+                                <div class="stat-value" id="current-period-attended">0</div>
+                                <div class="stat-label">Attended</div>
+                            </div>
+                            <div class="current-period-mini-stat current-period-mini-stat--unattended">
+                                <div class="stat-value" id="current-period-unattended">0</div>
+                                <div class="stat-label">Unattended</div>
+                            </div>
+                        </div>
+                        <div class="current-period-layout__timer">
+                            <div class="text-xs text-gray-500 font-semibold uppercase tracking-wide">Ending in</div>
+                            <div id="current-period-countdown" class="current-period-countdown">—:—</div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="dashboard-grid mb-8">
                     <div class="stat-card" style="border-color: #059669;">
                         <div class="stat-value" id="stat-on-time">0</div>
