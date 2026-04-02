@@ -13,6 +13,7 @@
     <!-- Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
@@ -257,11 +258,25 @@
 
                     <!-- Classrooms Management -->
                     <div class="card">
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                             <h3 class="font-bold">Classrooms</h3>
-                            <button onclick="app.openClassroomModal()" class="btn btn-primary btn-sm">
-                                <i class="fas fa-plus"></i> Add Classroom
-                            </button>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <button onclick="app.openClassroomModal()" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-plus"></i> Add Classroom
+                                </button>
+                                <button onclick="app.downloadAllQRPdf()" class="btn btn-secondary btn-sm" type="button"
+                                    title="One PDF with every classroom QR (good for printing)">
+                                    <i class="fas fa-file-pdf"></i> PDF (all)
+                                </button>
+                                <button onclick="app.downloadAllQRZip()" class="btn btn-secondary btn-sm" type="button"
+                                    title="ZIP folder of PNG images, one per classroom">
+                                    <i class="fas fa-file-archive"></i> PNGs (ZIP)
+                                </button>
+                                <button onclick="app.printQRCodes()" class="btn btn-secondary btn-sm" type="button"
+                                    title="Open print dialog with all QRs on one job">
+                                    <i class="fas fa-print"></i> Print all
+                                </button>
+                            </div>
                         </div>
                         <div class="table-container" style="max-height: 300px; overflow-y: auto;">
                             <table id="classrooms-table">
