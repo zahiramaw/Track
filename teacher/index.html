@@ -100,6 +100,7 @@
 
     <script type="module">
         import { db, collection, getDocs, addDoc, query, where, doc, getDoc } from '../firebase-init.js';
+        import { loadPeriodConfigFromFirestore } from '../period-config.js';
 
         // --- DATA STORE (Firebase Adapter) ---
         const Store = {
@@ -458,8 +459,9 @@
         // Expose app globally
         window.app = app;
 
-        // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        // Initialize (load cloud bell schedule before period detection / check-in)
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadPeriodConfigFromFirestore();
             app.init();
         });
     </script>

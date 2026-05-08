@@ -455,10 +455,117 @@ body {
     box-shadow: var(--shadow);
 }
 
+/* Settings (admin → Settings) */
+.settings-tabs {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0.4rem;
+    background: #F8FAFC;
+    border: 1px solid var(--gray-200);
+    border-radius: calc(var(--radius) + 0.15rem);
+    box-shadow: none;
+}
+
+.settings-tab-button {
+    appearance: none;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--gray-700);
+    padding: 0.55rem 0.9rem;
+    border-radius: calc(var(--radius) - 0.05rem);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 1.1;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.settings-tab-button:hover {
+    background: rgba(15, 23, 42, 0.06); /* slate-ish */
+}
+
+.settings-tab-button:active {
+    transform: translateY(1px);
+}
+
+.settings-tab-button.active {
+    background: var(--white);
+    border-color: var(--gray-200);
+    color: var(--dark);
+    box-shadow: var(--shadow-sm);
+}
+
+.settings-tab-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.22);
+}
+
+@media (max-width: 520px) {
+    .settings-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.5rem;
+        padding: 0.6rem;
+    }
+
+    .settings-tab-button {
+        width: 100%;
+        text-align: center;
+        padding: 0.65rem 0.75rem;
+    }
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
+}
+
+/* Period editor (admin → Periods) */
+.period-edit-table {
+    table-layout: fixed;
+}
+
+.period-edit-table th:nth-child(1),
+.period-edit-table td:nth-child(1) {
+    width: 5.25rem;
+}
+
+.period-edit-table th:nth-child(5),
+.period-edit-table td:nth-child(5) {
+    width: 4.5rem;
+}
+
+.period-edit-table th,
+.period-edit-table td {
+    padding: 0.65rem 0.75rem;
+}
+
+.period-edit-table .input {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.95rem;
+    border-radius: 0.6rem;
+}
+
+.period-edit-table .input--compact {
+    padding: 0.45rem 0.55rem;
+    font-size: 0.9rem;
+}
+
+.period-edit-table .input--period-id {
+    width: 4.25rem;
+    min-width: 4.25rem;
+    text-align: center;
+}
+
+.period-edit-table .period-break-checkbox {
+    width: 1.1rem;
+    height: 1.1rem;
+    transform: translateY(1px);
 }
 
 th {

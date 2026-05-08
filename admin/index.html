@@ -66,7 +66,7 @@
                     <a onclick="app.switchTab('dashboard')" class="nav-link active" id="tab-dashboard">Dashboard</a>
                     <a onclick="app.switchTab('class')" class="nav-link" id="tab-class">Class</a>
                     <a onclick="app.switchTab('teachers')" class="nav-link" id="tab-teachers">Teachers</a>
-                    <a onclick="app.switchTab('admin')" class="nav-link" id="tab-admin">Admin</a>
+                    <a onclick="app.switchTab('settings')" class="nav-link" id="tab-settings">Settings</a>
                     <a onclick="app.logout()" class="nav-link text-danger"><i class="fas fa-sign-out-alt"></i></a>
                 </div>
             </div>
@@ -247,25 +247,33 @@
                 </div>
             </div>
 
-            <!-- Admin Tab -->
-            <div id="content-admin" class="tab-content hidden">
-                <div class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                    <!-- Teachers Management -->
+            <!-- Settings (combined admin + periods) -->
+            <div id="content-settings" class="tab-content hidden">
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold">Settings</h2>
+                    <p class="text-sm text-gray-600">Manage teachers, classrooms, off-days, bell schedule, and general rules.</p>
+                </div>
+
+                <div class="settings-tabs mb-4">
+                    <button type="button" class="settings-tab-button active" data-settings-tab="teachers">Teachers</button>
+                    <button type="button" class="settings-tab-button" data-settings-tab="classrooms">Class rooms</button>
+                    <button type="button" class="settings-tab-button" data-settings-tab="offdays">Off Days</button>
+                    <button type="button" class="settings-tab-button" data-settings-tab="periods">Periods</button>
+                    <button type="button" class="settings-tab-button" data-settings-tab="general">General</button>
+                </div>
+
+                <!-- Tab 1: Teachers -->
+                <section id="settings-section-teachers" class="settings-section">
                     <div class="card">
-                        <div class="flex justify-between items-center mb-4">
+                        <div class="flex justify-between items-center mb-4" style="align-items: center;">
                             <h3 class="font-bold">Teachers</h3>
                             <div class="flex items-center gap-2">
                                 <button onclick="app.openTeacherModal()" class="btn btn-primary btn-sm">
                                     <i class="fas fa-plus"></i> Add Teacher
                                 </button>
-                                <!-- <label for="teacher-upload" class="btn btn-primary btn-sm" style="cursor: pointer; margin: 0;">
-                                    <i class="fas fa-upload"></i> Upload Excel
-                                </label>
-                                <input type="file" id="teacher-upload" accept=".xlsx,.xls" style="display: none;" onchange="app.handleTeacherUpload(event)"> -->
                             </div>
                         </div>
-                        <div id="teacher-upload-status" class="hidden mb-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm"></div>
-                        <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                        <div class="table-container" style="max-height: 420px; overflow-y: auto;">
                             <table id="teachers-table">
                                 <thead>
                                     <tr>
@@ -279,10 +287,12 @@
                             </table>
                         </div>
                     </div>
+                </section>
 
-                    <!-- Classrooms Management -->
+                <!-- Tab 2: Class rooms -->
+                <section id="settings-section-classrooms" class="settings-section hidden">
                     <div class="card">
-                        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+                        <div class="flex justify-between items-center mb-4 flex-wrap gap-2" style="align-items: center;">
                             <h3 class="font-bold">Classrooms</h3>
                             <div class="flex items-center gap-2 flex-wrap">
                                 <button onclick="app.openClassroomModal()" class="btn btn-primary btn-sm">
@@ -302,7 +312,7 @@
                                 </button>
                             </div>
                         </div>
-                        <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+                        <div class="table-container" style="max-height: 420px; overflow-y: auto;">
                             <table id="classrooms-table">
                                 <thead>
                                     <tr>
@@ -315,8 +325,153 @@
                             </table>
                         </div>
                     </div>
-                </div>
+                </section>
 
+                <!-- Tab 3: Off Days -->
+                <section id="settings-section-offdays" class="settings-section hidden">
+                    <div class="grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold"><i class="fas fa-calendar-times"></i> Day/Class Off</h3>
+                            </div>
+                            <form onsubmit="app.markDayOff(event)" class="flex flex-col gap-4">
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-700 mb-2 block">Select Date</label>
+                                    <input type="date" id="off-day-date" class="input" required>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-700 mb-2 block">Select Class(es)</label>
+                                    <select id="off-day-class" class="input" required>
+                                        <option value="all">All Classes</option>
+                                        <!-- Populated by JS -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-700 mb-2 block">Reason (Optional)</label>
+                                    <input type="text" id="off-day-reason" class="input" placeholder="e.g., Public Holiday, School Event">
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                            </form>
+
+                            <div class="mt-6">
+                                <h4 class="font-semibold mb-3 text-gray-700">Scheduled Off Days</h4>
+                                <div id="off-days-list" class="flex flex-col gap-2" style="max-height: 200px; overflow-y: auto;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold"><i class="fas fa-user-times"></i> Teacher Off</h3>
+                            </div>
+                            <form onsubmit="app.markTeacherOff(event)" class="flex flex-col gap-4">
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-700 mb-2 block">Select Teacher</label>
+                                    <select id="off-teacher-id" class="input" required>
+                                        <option value="" disabled selected>Select a Teacher</option>
+                                        <!-- Populated by JS -->
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-700 mb-2 block">Select Date</label>
+                                    <input type="date" id="off-teacher-date" class="input" required>
+                                </div>
+                                <div>
+                                    <label class="text-sm font-semibold text-gray-700 mb-2 block">Reason (Optional)</label>
+                                    <input type="text" id="off-teacher-reason" class="input" placeholder="e.g., Sick Leave, Personal Day">
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save
+                                </button>
+                            </form>
+
+                            <div class="mt-6">
+                                <h4 class="font-semibold mb-3 text-gray-700">Teacher Off Days</h4>
+                                <div id="teacher-off-days-list" class="flex flex-col gap-2" style="max-height: 200px; overflow-y: auto;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Tab 4: Periods -->
+                <section id="settings-section-periods" class="settings-section hidden">
+                    <div class="card">
+                        <div class="flex gap-3 mb-3" style="align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                            <div>
+                                <h3 class="font-bold">Periods</h3>
+                                <p id="period-config-status" class="text-sm text-gray-600 mt-1"></p>
+                            </div>
+                            <div class="flex gap-2" style="align-items: center; flex-wrap: wrap;">
+                                <button type="button" onclick="app.handleSavePeriods()" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-save"></i> Save to cloud
+                                </button>
+                                <button type="button" onclick="app.handleRestoreBuiltinPeriods()" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-undo"></i> Restore defaults
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 mb-3" style="align-items: center; justify-content: space-between; flex-wrap: wrap;">
+                            <div class="text-sm text-gray-600">Choose the day type and edit times.</div>
+                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                                <span>Day type</span>
+                                <select id="period-day-type" class="input" style="width: 16rem; max-width: 100%;">
+                                    <option value="regular" selected>Monday – Thursday</option>
+                                    <option value="friday">Friday</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="table-container">
+                            <table id="period-rows-active" class="period-edit-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Start</th>
+                                        <th>End</th>
+                                        <th>Break</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">Period IDs should stay unchanged so class schedules and attendance records stay aligned.</p>
+                    </div>
+                </section>
+
+                <!-- Tab 5: General -->
+                <section id="settings-section-general" class="settings-section hidden">
+                    <div class="card">
+                        <div class="flex justify-between items-center mb-4" style="align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <div>
+                                <h3 class="font-bold">General</h3>
+                                <p class="text-sm text-gray-600 mt-1">Rules that apply to attendance calculations.</p>
+                            </div>
+                            <button type="button" onclick="app.handleSavePeriods()" class="btn btn-primary btn-sm">
+                                <i class="fas fa-save"></i> Save to cloud
+                            </button>
+                        </div>
+
+                        <label class="flex items-center gap-2 text-sm text-gray-700" style="max-width: 520px;">
+                            <span style="min-width: 12.5rem;">On-time grace (minutes)</span>
+                            <input
+                                type="number"
+                                id="period-late-threshold"
+                                class="input"
+                                style="width: 7.5rem;"
+                                min="0"
+                                max="120"
+                                step="1"
+                                title="Check-ins within this many minutes after period start count as on time"
+                            >
+                        </label>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
